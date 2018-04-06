@@ -14,7 +14,9 @@ decode_results results;            // create instance of 'decode_results'
 
 Servo servo_triggor;
 int current_angle = 90;
-
+Servo myservo;  // 创建一个伺服电机对象
+int val = 90;
+bool b_stop_rotate = false;
 
 #define TrigPin 2
 #define EchoPin 3
@@ -41,11 +43,19 @@ void test_shoot_time()
   }
 }
 
-void shoot()
+void my_servo_triggor_write(int my_angle)
 {
-      servo_triggor.write( 170 );      
-      delay(300);
-      servo_triggor.write( current_angle );
+  servo_triggor.attach(9); // attach 9 to servo_triggor
+  servo_triggor.write( my_angle );
+  delay(250);
+  servo_triggor.detach();// remove the noise from SG90 //https://www.youtube.com/watch?v=ZsvNVPCetmI
+}
+
+void shoot()
+{      
+      my_servo_triggor_write(170);
+      delay(10);
+      my_servo_triggor_write(current_angle);
       count_shoot = 0;
 }
 
@@ -65,7 +75,7 @@ void add_delta_degree_to_servo(int delta_degree)
   if( _tmp_current_angle !=  current_angle )
   {
     current_angle = _tmp_current_angle;
-    servo_triggor.write( current_angle );
+    my_servo_triggor_write(current_angle);
   }   
 }
 
@@ -87,7 +97,8 @@ void bebebe(float sound_distance)
   //Serial.print((int)Value_cm);
   //Serial.println("cm");
   if(sound_distance > DETECT_DISTANCE)
-  {    
+  {
+    b_stop_rotate = false;    
     digitalWrite(spk, 0);   
     count_shoot = 0;
     filter_long_be_state = 0;
@@ -95,6 +106,7 @@ void bebebe(float sound_distance)
   }
   else
   {
+    b_stop_rotate = true;
     if(MODE_BEBE % 2 == 1)
     {
         if(b_bebebe)
@@ -138,9 +150,15 @@ void setup()
   
   Serial.println("IR Receiver Button Decode"); 
   irrecv.enableIRIn(); // Start the receiver
+  
+  my_servo_triggor_write(current_angle);
 
-  servo_triggor.attach(9); // attach 9 to servo_triggor
-  servo_triggor.write( current_angle );
+myservo.attach(10);  // 9号引脚输出电机控制信号
+                     //仅能使用9、10号引脚
+myservo.write(val);     // 设定伺服电机的位置
+
+
+  
 }
 
 void loop()
@@ -163,6 +181,8 @@ void loop()
     translateIR(); 
     irrecv.resume(); // receive the next value
   }
+  
+    a_servo_circle();
 }
 String hex_current_cmd;
 String hex_previous_cmd;
@@ -353,3 +373,42 @@ void translateIR() // takes action based on IR code received
   delay(50); // Do not get immediate repeat
 } //END translateIR
 
+bool b_rotate_right_circle = true;
+
+void a_servo_circle()
+{
+    
+//  val = 0;//得到伺服电机需要的角度（0到180之间）  
+//  myservo.write(val);     // 设定伺服电机的位置
+//  delay(1000);             // 等待电机旋转到目标角度
+//
+//  myservo.write(180);     // 设定伺服电机的位置
+//  delay(1000);             // 等待电机旋转到目标角度  
+
+if(b_stop_rotate == false)
+{
+  val += b_rotate_right_circle?  1: -1 ;
+  if(val > 180)
+  {
+    val = 180;
+  }
+  else if(val < 0)
+  {
+    val = 0;
+  }
+  
+  if (val == 180) {
+    b_rotate_right_circle = false;
+  }
+  if (val == 0) {
+    b_rotate_right_circle = true;
+  }
+  myservo.write(val);     // 设定伺服电机的位置
+//  delay(100);
+}
+  
+  
+  
+ 
+  
+}
